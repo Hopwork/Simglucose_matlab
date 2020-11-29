@@ -1,17 +1,45 @@
 
+
+% TODO: import everything from envs
+% import controller
+
+
+classdef SimObj
+   properties
+      controller
+      env
+      sim_time
+   end
+   methods
+      function simulate(obj)
+         %todo
+         Step = obj.env.reset();
+         while env.time < env.scenario.start_time + sim_time
+             action = controller.policy(obs, Step);
+             Step = env.step(action);
+      end
+      function r = results(obj)
+         env.show_history()
+      end
+      function reset(obj)
+        obj.env.reset()
+        obj.controller.reset()
+      end
+   end
+end
+
 function plot(results)
     %todo
 end
     
 function simObj = create_sim_instance(controller)
-    env = build_envs(scenario);    
+    env = build_env();    
     simObj = SimObj(controller, env);
 end  
 
 function results = sim(sim_object)
     sim_object.simulate();
-    sim_object.save_results();
-    results = sim_object.results();
+    results = sim_object.results()
 end
 
 %do everything!
