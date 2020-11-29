@@ -42,9 +42,11 @@ function results = sim(sim_object)
     results = sim_object.results()
 end
 
-%do everything!
 function RUNME(controller)
     sim_inst = create_sim_instance(controller=controller);
     results = sim(sim_inst);
     plot(results);
 end
+
+pid_controller = PIDController(P=0.001, I=0.00001, D=0.001, target=140)
+RUNME(pid_controller)
