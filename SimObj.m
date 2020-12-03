@@ -20,7 +20,7 @@ classdef SimObj
          end
       end 
       function r = results(obj)
-         env.show_history()
+         env.show_history();
       end
       function reset(obj)
         obj.env.reset();

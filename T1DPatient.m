@@ -1,47 +1,46 @@
 classdef T1DPatient
    properties
-    patient_params
-    init_state=None
-    t0=0
-    last_CHO = 0
-    is_eating = False
-    last_foodtaken = 0
+    patient_params;
+    t0=0;
+    last_CHO = 0;
+    is_eating = 0; %0 = false, 1 = true
+    last_foodtaken = 0;
    end
    methods
       function y = state(obj)
-        y = obj.odesolver.y
+        y = obj.odesolver.y;
       end
 
       function t_ = t(obj)
-        t_ = obj.odesolver.t
+        t_ = obj.odesolver.t;
       end
 
       function sample_time_ = sample_time(obj)
-        sample_time_ = 1
+        sample_time_ = 1;
       end
 
       function step(obj, insulin, CHO)
         % todo
-        if CHO > 0. && last_CHO == 0.
-            last_Qsto = obj.odesolver.y(1) + obj.odesolver.y(2)
-            obj.last_foodtaken = 0
-            obj.is_eating = True
+        if CHO > 0. && obj.last_CHO == 0.
+            last_Qsto = obj.odesolver.y(1) + obj.odesolver.y(2);
+            obj.last_foodtaken = 0;
+            obj.is_eating = 1; %true
         end
 
-        if obj.is_eating
-            obj.last_foodtaken = obj.last_foodtaken + CHO
+        if obj.is_eating == 1
+            obj.last_foodtaken = obj.last_foodtaken + CHO;
         end
 
-        if CHO <= 0 and last_CHO > 0
-            obj.is_eating = False
+        if CHO <= 0 && obj.last_CHO > 0
+            obj.is_eating = 0;
         end
 
-        obj.last_CHO = CHO
+        obj.last_CHO = CHO;
 
-        [t, y] = ode45(@(t, x, CHO, insulin, patient_params, last_Qsto, last_foodtaken) obj.model(t, x, CHO, insulin, patient_params, last_Qsto, last_foodtaken), t, x, CHO, insulin, patient_params, last_Qsto, last_foodtaken)
+        [k, y] = ode45(@(t, x, CHO, insulin, patient_params, last_Qsto, last_foodtaken) obj.model(t, x, CHO, insulin, patient_params, last_Qsto, last_foodtaken), t, x, CHO, insulin, obj.patient_params, last_Qsto, obj.last_foodtaken);
       end
 
-      function y = dxdt = model(obj, t, x, CHO, insulin, patient_params, last_Qsto, last_foodtaken)
+      function dxdt = model(obj, t, x, CHO, insulin, patient_params, last_Qsto, last_foodtaken)
         dxdt = zeros(1, 13);
         d = CHO * 1000; %g -> mg
         insulin = insulin * 6000 / params(BW); %U/min -> pmol/kg/min
@@ -55,11 +54,12 @@ classdef T1DPatient
         dxdt(1) = -params(kmax) * x(1) + params(d);
 
         if Dbar > 0
-            aa = 5/2/(1-params(b)/Dbar;
+            aa = 5/2/(1-params(b))/Dbar;
             cc = 5/2/params(d)/Dbar;
-            kgut = params(kmin) + (params(kmax) - params(kmin) /2*tanh(aa*(Qsto - params(b) * Dbar))...
-                -tanh(cc*(Qsto - params(d) * Dbar)) + 2;
-        else kgut = params(kmax);
+            kgut = params(kmin) + (params(kmax) - params(kmin)) /2*tanh(aa*(Qsto - params(b) * Dbar))...
+                -tanh(cc*(Qsto - params(d) * Dbar) + 2);
+        else
+            kgut = params(kmax);
         end
         %stomach liquid
         dxdt(2) = params(kmax) * x(1) - x(2) * kgut;
@@ -93,7 +93,7 @@ classdef T1DPatient
         dxdt(5) = (x(5) >= 0) * dxdt(5);
 
         %insulin kinetics
-        dxdt(6) = -(params(m2) + params(m4)*x(6) + params(m1) * ...
+        dxdt(6) = -(params(m2) + params(m4))*x(6) + params(m1) * ...
             x(10)+params(ka1) * x(11)+params(ka2) * x(12);
         It = x(6)/params(Vi);
         dxdt(6) = (x(6) >= 0)*dxdt(5);
@@ -110,7 +110,7 @@ classdef T1DPatient
         dxdt(10) = (x(10) >= 0) * dxdt(10);
 
         %subcutaneous insulin kinetics
-        dxdt(11) = insulin - (params(ka1) + params(kd) * x(11);
+        dxdt(11) = insulin - (params(ka1) + params(kd)) * x(11);
         dxdt(11) = (x(11) >= 0) * dxdt(11);
 
         dxdt(12) = kd * x(11) - ka2 * x(12);
@@ -125,13 +125,13 @@ classdef T1DPatient
       function obs = observation(obj)
         GM = obj.odesolver.y(13)
         Gsub = GM / obj.patient_params(Vg) %Vg
-        obs = containers.Map({"Gsub"},
-                             {Gsub})
+       % obs = containers.Map({"Gsub"},                                       %%%%???????
+        %                     {Gsub})
       end
       
       function reset(obj)
         obj.last_CHO = 0
-        obj.is_eating = False
+        obj.is_eating = 0
         obj.last_foodtaken = 0
       end
    end

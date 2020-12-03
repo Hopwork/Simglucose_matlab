@@ -11,7 +11,7 @@ classdef envs
         t = obj.scenario.start_time + minutes(obj.patient.t);
       end
 
-      function CHO, insulin, BG, CGM = mini_step(obj, action)
+      function [CHO, insulin, BG, CGM] = mini_step(obj, action)
         %current action
         CHO = obj.scenario.get_action(self.time);
         basal = obj.pump.basal(action.basal);
@@ -26,8 +26,7 @@ classdef envs
         CGM = obj.sensor.measure(obj.patient);
       end
 
-      function Step = step(obj, action, risk_diff)                         %%?????????????
-          reward_fun = risk_diff;
+      function Step = step(obj, action)                        
           CHO = 0.0;
           insulin = 0.0;
           BG = 0.0;
@@ -35,7 +34,7 @@ classdef envs
 
         for i = 1:round(obj.sample_time)
             % Compute moving average as the sample measurements
-            tmp_CHO, tmp_insulin, tmp_BG, tmp_CGM = obj.mini_step(action);  %?????????????
+            [tmp_CHO, tmp_insulin, tmp_BG, tmp_CGM] = obj.mini_step(action);  
             CHO = CHO + tmp_CHO / obj.sample_time;
             insulin = insulin + tmp_insulin / obj.sample_time;
             BG = BG + tmp_BG / obj.sample_time;
@@ -44,7 +43,7 @@ classdef envs
         
         % Compute risk index
         horizon = 1;
-        LBGI, HBGI, risk = risk_index(BG, horizon);
+        [LBGI, HBGI, risk] = risk_index(BG, horizon);
 
         % Record current action
         obj.CHO_hist = [obj.CHO_hist CHO];
@@ -61,15 +60,15 @@ classdef envs
         %Compute reward, and decide whether game is over
         window_size = int(60 / obj.sample_time);
         BG_last_hour = obj.CGM_hist(end-window_size:end);                   %%%%%is this correct for neg index
-        reward = reward_fun(BG_last_hour);
+        reward = risk_diff(BG_last_hour);
         done = (BG < 70)|(BG > 350);
-        obs = containers.Map("CGM",CGM);                                    %%%% confused
+        obs = containers.Map("CGM",CGM);                                    
         step_key = ["observation","reward","done","sample_time","patient_name","meal","patient_state"];
         step_vals = [obs, reward, done, obj.sample_time, obj.patient.name, CHO, obj.patient.state];
         Step = containers.Map(step_key, step_vals);
       end
 
-      function reset(obj)
+      function reset_(obj)
         obj.sample_time = obj.sensor.sample_time;
         obj.viewer = None;
 
@@ -87,13 +86,13 @@ classdef envs
         obj.insulin_hist = {};
       end
 
-      function Step = reset(obj)                                            %%%%%2 reset functions??? and step maps??
+      function Step = reset(obj)                                            
         obj.patient.reset();
         obj.sensor.reset();
         obj.scenario.reset();
-        obj.reset();
+        obj.reset_();
         CGM = obj.sensor.measure(obj.patient);
-        obs = Observation(CGM=CGM);                                         %%%%%WHAT DOES THIS MEAN CGM=CGM 
+        obs = containers.Map(["CGM"],[CGM]);                                 
         step_key2 = ["observation","reward","done","sample_time","patient_name","meal","patient_state"];
         step_vals2 = [obs, 0, False, obj.sample_time, obj.patient.name, 0, obj.patient.state];
         Step2 = containers.Map(step_key2, step_vals2);
@@ -107,4 +106,25 @@ classdef envs
    end
 end
 
+function tup = risk_index(BG, horizon)
+    BG_to_compute = BG(-horizon:end);
+    fBG = 1.509 * (log(BG_to_compute)^1.084 - 5.381);
+    rl = 10 * fBG(fBG < 0)^2;
+    rh = 10 * fBG(fBG > 0)^2;
+    LBGI = mean(rl);
+    HBGI = mean(rh);
+    RI = LBGI + HBGI;
+    tup = [LBGI, HBGI, RI];
+end
 
+function riskDiff = risk_diff(BG_last_hour)
+    if length(BG_last_hour) < 2
+        riskDiff = 0;
+    else
+        A = risk_index(BG_last_hour(-1), 1);
+        aaa, bbb, risk_current = A;
+        B = risk_index(BG_last_hour(-2), 1);
+        ccc, ddd, risk_prev = Bl;
+        riskDiff = risk_prev - risk_current;
+    end
+end
