@@ -1,18 +1,20 @@
 classdef T1DPatient
    properties
-    patient_params;
+    params;
     t0=0;
     last_CHO = 0;
     is_eating = 0; %0 = false, 1 = true
     last_foodtaken = 0;
+    current_bg;
+    current_t;
    end
    methods
       function y = state(obj)
-        y = obj.odesolver.y;
+        y = obj.odesolver.current_bg;
       end
 
       function t_ = t(obj)
-        t_ = obj.odesolver.t;
+        t_ = obj.current_t;
       end
 
       function sample_time_ = sample_time(obj)
@@ -20,11 +22,10 @@ classdef T1DPatient
       end
 
       function step(obj, insulin, CHO)
-        % todo
         if CHO > 0. && obj.last_CHO == 0.
-            last_Qsto = obj.odesolver.y(1) + obj.odesolver.y(2);
+            last_Qsto = obj.current_bg(1) + obj.current_bg(2);
             obj.last_foodtaken = 0;
-            obj.is_eating = 1; %true
+            obj.is_eating = 1;
         end
 
         if obj.is_eating == 1
@@ -37,17 +38,17 @@ classdef T1DPatient
 
         obj.last_CHO = CHO;
 
-        [k, y] = ode45(@(t, x, CHO, insulin, patient_params, last_Qsto, last_foodtaken) obj.model(t, x, CHO, insulin, patient_params, last_Qsto, last_foodtaken), t, x, CHO, insulin, obj.patient_params, last_Qsto, obj.last_foodtaken);
+        [obj.current_t, obj.current_bg] = ode45(@(t, x, CHO, insulin, params, last_Qsto, last_foodtaken) obj.model(t, x, CHO, insulin, params, last_Qsto, last_foodtaken), t, x, CHO, insulin, obj.params, last_Qsto, obj.last_foodtaken);
       end
 
-      function dxdt = model(obj, t, x, CHO, insulin, patient_params, last_Qsto, last_foodtaken)
+      function dxdt = model(obj, x, CHO, insulin, params, last_Qsto, last_foodtaken)
         dxdt = zeros(1, 13);
         d = CHO * 1000; %g -> mg
         insulin = insulin * 6000 / params(BW); %U/min -> pmol/kg/min
         basal = params(u2ss) * params(BW) / 6000; %U/min
 
         %glucose in stomach
-        last_Qsto = x(1) + x(2);
+        Qsto = x(1) + x(2);
         Dbar = last_Qsto + last_foodtaken;
 
         %stomach solid
@@ -119,20 +120,21 @@ classdef T1DPatient
         %subcutaneous glucose
         dxdt(13) = -params(ksc) * x(13) + params(ksc) * x(14);
         dxdt(13) = (x(13) >= 0 ) * dxdt(13);
-
+        
+        dxdt
+        x
       end
 
       function obs = observation(obj)
-        GM = obj.odesolver.y(13)
-        Gsub = GM / obj.patient_params(Vg) %Vg
-       % obs = containers.Map({"Gsub"},                                       %%%%???????
-        %                     {Gsub})
+       GM = obj.odesolver.current_bg(13);
+       Gsub = GM / obj.params(Vg);
+       obs = containers.Map("Gsub", Gsub);
       end
       
       function reset(obj)
-        obj.last_CHO = 0
-        obj.is_eating = 0
-        obj.last_foodtaken = 0
+        obj.last_CHO = 0;
+        obj.is_eating = 0;
+        obj.last_foodtaken = 0;
       end
    end
 end

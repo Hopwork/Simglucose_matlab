@@ -1,9 +1,3 @@
-
-
-% TODO: import everything from envs
-% import controller
-
-
 classdef SimObj
    properties
       controller;
@@ -12,7 +6,6 @@ classdef SimObj
    end
    methods
       function simulate(obj)
-         %todo
          Step = obj.env.reset();
          while env.time < (env.scenario.start_time + sim_time)
              action = controller.policy(obs, Step);

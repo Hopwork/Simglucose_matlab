@@ -18,15 +18,15 @@ classdef HardcodedScenario
             idx = obj.meal_times==t_min;
             carbs_added = obj.meal_carbs(idx);
         else
-            carbs_added = 0
+            carbs_added = 0;
         end
       end
       function create_scenario(obj)
         obj.meal_times = {9, 12, 6};
         obj.meal_carbs = {20.,50.,60.};
       end
-      function reset()
-        obj.create_scenario()
+      function reset(obj)
+        obj.create_scenario();
       end
    end
 end

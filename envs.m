@@ -4,6 +4,7 @@ classdef envs
       sensor
       pump
       scenario
+      sample_time
    end
    methods
       function t = time(obj)
@@ -70,7 +71,7 @@ classdef envs
 
       function reset_(obj)
         obj.sample_time = obj.sensor.sample_time;
-        obj.viewer = None;
+        %obj.viewer = None;
 
         BG = obj.patient.observation.Gsub;
         horizon = 1;
@@ -95,12 +96,12 @@ classdef envs
         obs = containers.Map(["CGM"],[CGM]);                                 
         step_key2 = ["observation","reward","done","sample_time","patient_name","meal","patient_state"];
         step_vals2 = [obs, 0, False, obj.sample_time, obj.patient.name, 0, obj.patient.state];
-        Step2 = containers.Map(step_key2, step_vals2);
+        Step = containers.Map(step_key2, step_vals2);
       end
 
       function res = show_history(obj)
           res_key = ["Time","BG","CGM","CHO","insulin","LBGI","HBGI","Risk"];
-          res_vals = [obj.time_hist,obj.BG_hist,obj.CGM_hist,obj.CHO_hist,obj.insulin_hist,obj.LBGI_hist,obj.HBGI_hist,obj.risk_hist];
+          res_vals = [obj.time_hist, obj.BG_hist, obj.CGM_hist, obj.CHO_hist, obj.insulin_hist, obj.LBGI_hist, obj.HBGI_hist, obj.risk_hist];
           res = containers.Map(res_key, res_vals);
       end      
    end
