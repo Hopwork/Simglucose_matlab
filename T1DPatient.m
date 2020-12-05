@@ -10,7 +10,7 @@ classdef T1DPatient
    end
    methods
       function y = state(obj)
-        y = obj.odesolver.current_bg;
+        y = obj.current_bg;
       end
 
       function t_ = t(obj)
@@ -126,7 +126,7 @@ classdef T1DPatient
       end
 
       function obs = observation(obj)
-       GM = obj.odesolver.current_bg(13);
+       GM = obj.current_bg(13);
        Gsub = GM / obj.params(Vg);
        obs = containers.Map("Gsub", Gsub);
       end
