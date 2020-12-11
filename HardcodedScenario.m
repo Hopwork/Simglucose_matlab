@@ -2,6 +2,7 @@ classdef HardcodedScenario
    properties
      meal_times
      meal_carbs
+     start_time
    end
    methods
       function carbs_added = get_action(obj, t)

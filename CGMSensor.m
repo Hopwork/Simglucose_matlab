@@ -7,7 +7,10 @@ classdef CGMSensor
    end
    methods
       function CGM = measure(obj, patient)
-        if mod(patient.t(), obj.sample_time) == 0
+          patient.t
+          obj.sample_time
+          p = mod(patient.t, obj.sample_time)
+        if  p == 0
             BG = patient.observation.Gsub;
             CGM_ = BG;
             CGM_ = max(CGM_, obj.cgm_params(7)); %min

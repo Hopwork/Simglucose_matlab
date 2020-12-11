@@ -5,6 +5,14 @@ classdef envs
       pump
       scenario
       sample_time
+      time_hist
+      BG_hist
+      CGM_hist
+      risk_hist
+      LBGI_hist
+      HBGI_hist
+      CHO_hist
+      insulin_hist
    end
    methods
       function t = time(obj)
@@ -65,17 +73,21 @@ classdef envs
         done = (BG < 70)|(BG > 350);
         obs = containers.Map("CGM",CGM);                                    
         step_key = ["observation","reward","done","sample_time","patient_name","meal","patient_state"];
-        step_vals = [obs, reward, done, obj.sample_time, obj.patient.name, CHO, obj.patient.state];
+        step_vals = [obs reward done obj.sample_time obj.patient.name CHO obj.patient.state];
         Step = containers.Map(step_key, step_vals);
       end
 
-      function reset_(obj)
+      function reset_(obj)%, insulin, CHO)
+        %insulin
+        %CHO
+        %obj.patient.step(insulin, CHO);
         obj.sample_time = obj.sensor.sample_time;
         %obj.viewer = None;
 
-        BG = obj.patient.observation.Gsub;
+        obs = obj.patient.observation();
+        BG = obs('GM');
         horizon = 1;
-        LBGI, HBGI, risk = risk_index({BG}, horizon);
+        [LBGI, HBGI, risk] = risk_index([BG 0], horizon);
         CGM = obj.sensor.measure(obj.patient);
         obj.time_hist = {obj.scenario.start_time};
         obj.BG_hist = {BG};
@@ -93,38 +105,46 @@ classdef envs
         obj.scenario.reset();
         obj.reset_();
         CGM = obj.sensor.measure(obj.patient);
-        obs = containers.Map(["CGM"],[CGM]);                                 
-        step_key2 = ["observation","reward","done","sample_time","patient_name","meal","patient_state"];
-        step_vals2 = [obs, 0, False, obj.sample_time, obj.patient.name, 0, obj.patient.state];
+        obs = containers.Map({'CGM'},[CGM]);
+        obs
+        step_key2 = {'observation','reward','done','sample_time','patient_name','meal','patient_state'};
+        CGM
+        obj.sample_time
+        obj.patient.name
+        obj.patient.state
+        step_vals2 = [CGM 0.0 false obj.sample_time obj.patient.name 0.0 obj.patient.state];
+        length(step_key2)
+        length(step_vals2)
+        step_vals2
         Step = containers.Map(step_key2, step_vals2);
       end
 
       function res = show_history(obj)
           res_key = ["Time","BG","CGM","CHO","insulin","LBGI","HBGI","Risk"];
-          res_vals = [obj.time_hist, obj.BG_hist, obj.CGM_hist, obj.CHO_hist, obj.insulin_hist, obj.LBGI_hist, obj.HBGI_hist, obj.risk_hist];
+          res_vals = [obj.time_hist obj.BG_hist obj.CGM_hist obj.CHO_hist obj.insulin_hist obj.LBGI_hist obj.HBGI_hist obj.risk_hist];
           res = containers.Map(res_key, res_vals);
       end      
    end
 end
 
-function tup = risk_index(BG, horizon)
-    BG_to_compute = BG(-horizon:end);
+function [LBGI, HBGI, RI] = risk_index(BG, horizon)
+    BG_to_compute = BG(end-horizon);
     fBG = 1.509 * (log(BG_to_compute)^1.084 - 5.381);
     rl = 10 * fBG(fBG < 0)^2;
     rh = 10 * fBG(fBG > 0)^2;
     LBGI = mean(rl);
     HBGI = mean(rh);
     RI = LBGI + HBGI;
-    tup = [LBGI, HBGI, RI];
+    %tup = [LBGI, HBGI, RI];
 end
 
 function riskDiff = risk_diff(BG_last_hour)
     if length(BG_last_hour) < 2
         riskDiff = 0;
     else
-        A = risk_index(BG_last_hour(-1), 1);
+        A = risk_index([BG_last_hour(-1) 0], 1);
         aaa, bbb, risk_current = A;
-        B = risk_index(BG_last_hour(-2), 1);
+        B = risk_index([BG_last_hour(-2) 0], 1);
         ccc, ddd, risk_prev = Bl;
         riskDiff = risk_prev - risk_current;
     end

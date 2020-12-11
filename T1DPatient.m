@@ -5,8 +5,9 @@ classdef T1DPatient
     last_CHO = 0;
     is_eating = 0; %0 = false, 1 = true
     last_foodtaken = 0;
-    current_bg;
+    current_bg = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
     current_t;
+    name;
    end
    methods
       function y = state(obj)
@@ -22,7 +23,7 @@ classdef T1DPatient
       end
 
       function step(obj, insulin, CHO)
-        if CHO > 0. && obj.last_CHO == 0.
+        if CHO > 0 && obj.last_CHO == 0
             last_Qsto = obj.current_bg(1) + obj.current_bg(2);
             obj.last_foodtaken = 0;
             obj.is_eating = 1;
@@ -126,9 +127,13 @@ classdef T1DPatient
       end
 
       function obs = observation(obj)
+       obj.current_bg
        GM = obj.current_bg(13);
-       Gsub = GM / obj.params(Vg);
-       obs = containers.Map("Gsub", Gsub);
+       GM
+       keys(obj.params)
+       obj.params('Vg')
+       Gsub = GM / obj.params('Vg');
+       obs = containers.Map(["Gsub","GM"], [Gsub,GM]);
       end
       
       function reset(obj)
